@@ -3,7 +3,7 @@
 - 11/08/2024 -
 
 ## Introduction
-PennCloud is a cloud storage and communication platform that allows users to store files, send emails, and chat with other users. It is designed to be user-friendly and efficient, with a focus on providing a seamless experience for users.
+PennCloud is a storage and communication platform that allows users to store files, send emails, and chat with other users. It is designed to be user-friendly and efficient, with distributed servers and fault tolerance to ensure that the platform is always available. The platform is built with a frontend load balancer, frontend servers, backend servers, and an SMTP server to handle the various functionalities.
 
 ## Deployed Link
 Coming Soon!
