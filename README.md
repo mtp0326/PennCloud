@@ -8,7 +8,7 @@ PennCloud is a storage and communication platform that allows users to store fil
 ## Deployed Link
 Coming Soon!
 
-## Features
+## Frontend Features
 
 ### Storage Drive
 <img src="media/storagedrive.gif" width="960" alt="file"/>
@@ -53,18 +53,31 @@ Our design overall consists of various components. There is a frontend load bala
 1. The frontend server will first send the transaction request to the primary node of the backend group. If the transaction is a GET request, the primary node immediately returns the result to the frontend server. If the transaction is a PUT, PUTV, or DELETE request, the primary node will perform a 2PC protocol with the other subordinate nodes in the backend group. For the 2PC protocol, the primary node will first send a PREP message to the subordinate nodes, to which the nodes respond with an ACK or REJECT message.
 2. If all the subordinate nodes respond with ACK, the primary node will perform the transaction and then send a COMMIT message to the subordinate nodes for them to perform their transactions. If any subordinate node responds with REJECT, the primary node will send an ABORT message to the subordinate nodes.
 
+## Backend Features
 
-## 2PC Protocol and Fault Tolerance
+### 2PC Protocol and Fault Tolerance
 The logs represent the three nodes in the same backend group. The leftmost log is the primary node, and the other two are the subordinate nodes.
 
-### Fully functioning group (3 Nodes):
+#### Fully functioning group (3 Nodes):
 ![3nodes](media/3nodes.gif)
 - The login shows that the transaction with the 2PC protocol is working well. We see the primary node sending the PREP message to the subordinate nodes and the subordinate nodes responding with ACK. The primary node then sends a COMMIT message to the subordinate nodes before doing its transaction, and the subordinate nodes perform their transactions.
 
-### 1 Faulty Node (2 Nodes):
+#### 1 Faulty Node (2 Nodes):
 ![2nodes](media/2nodes.gif)
-- We shut down the primary node, which will be caught by the heartbeat check. The two subordinate nodes are then assigned a new primary node, as seen in "New configuration." We can see that changing the user's password still works well with 2 nodes and their interaction.
+- We shut down the primary node, which will be caught by the heartbeat system from the backend coordinator that regularly checks for the health of each backend node. The two subordinate nodes are then assigned a new primary node, as seen in "New configuration." We can see that changing the user's password still works well with 2 nodes and their interaction.
 
-### 2 Faulty Nodes (1 Node):
+#### 2 Faulty Nodes (1 Node):
 ![1node](media/1node.gif)
 - We shut down the primary node from the 2 nodes once again. We see that the node with the log to the right is the new primary node and can easily perform the chat transaction.
+
+### Key-value store
+The backend consists of a backend coordinator and multiple backend servers which handle the commands PUT, GET, CPUT, DELETE, as well as some other commands that are helpers for other services, such as the admin console. The backend storage service is truly distributed where there is extensive fault tolerance. If one storage node is stopped, the coordinator will notice and direct the users to a working storage node. Additionally, the data is replicated across the storage nodes, so the users will not lose data in case the storage node they were previously accessing fails. The storage servers are grouped by 3, where each group has a primary node. For each transaction, the primary storage server will send a prepare to the other storage servers in its group, which will respond and if all other storage servers response ready the transaction will go through as 2PC is implemented within the system.
+
+### Tablet/Partitioning
+For the tablets and partitioning we used a predetermined size (by default 50 MB) to determine whether a given tablet should be split into two. Each KV store server contains a vector of currently active tablets and places incoming requests into the tablets based on their key range (which dynamically changes as more write operations are performed). Each tablet maintains a log of the write operations it has received in one of the following formats: PUTV;row;col;valueSize;value or CPUT;row;col;v1Size;v2Size;v1;v2 or DELE;row;col. This allows operations to be replayed at recovery.
+
+### Checkpointing
+Every tablet logs each incoming transaction. These logs are replayed upon revival of a node. Additionally, each tablet periodically checkpoints (by default, every 10 write transactions). Once a node is restarted, it requests the latest checkpoint numbers from the primary. If the numbers on its local folder match, we replay the latest local checkpoints. If they do not, the node requests the latest checkpoint file(s) from the primary and then replays them. If the primary receives any new transactions during this time, they are also forwarded to the recovering node. We were, however, unable to get the checkpoint replaying functionality to replay the checkpoint upon revival.
+
+### Heartbeat
+The coordinator would run a heartbeat system by pinging a port open on each storage node in a separate thread specifically open for pinging heartbeats. Each time it is pinged, it receives the pid of the storage server as well as knowing that it is running. The pings would be sent out every 100ms, and if no response is received for 5 pings, the server would be marked as down and no longer used by the coordinator until it is active again. The pid received is used for debugging via the admin console which can stop and start any of the storage servers.
