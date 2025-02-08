@@ -40,14 +40,14 @@ Our design overall consists of various components. There is a frontend load bala
 ### General Workflow of Transaction:
 1. When the user sends a transaction request from the webpage, the request is sent to the frontend load balancer. The frontend load balancer then provides the user with the IP address and port of the frontend server.
 2. The user then sends a connection and transaction request to the indicated frontend server.
-3. The frontend server then sends a transaction request to the backend load balancer to get an available backend group's IP address and port. The load balancer then provides the IP address and port of the primary node for the available backend group.
+3. The frontend server then sends a transaction request to the backend load balancer/coordinator to get an available backend group's IP address and port. The load balancer then provides the IP address and port of the primary node for the available backend group.
 4. The frontend server then sends the transaction request to the primary node of the backend group.
 5. The backend group performs a 2PC protocol to process the request (will be specified in the 2PC Backend Transaction Process).
 6. The primary node will return the result to the frontend server.
 7. The frontend server will then return the result to the user.
 
 ### 2PC Backend Transaction Process
-**Initial Configuration:** The backend load balancer will first assign the primary and subordinate nodes to the primary backend node for each group, to which the primary backend node will then send the configuration to the subordinate nodes.
+**Initial Configuration:** The backend load balancer/coordinator will first assign the primary and subordinate nodes to the primary backend node for each group, to which the primary backend node will then send the configuration to the subordinate nodes.
 
 **Transaction:**
 1. The frontend server will first send the transaction request to the primary node of the backend group. If the transaction is a GET request, the primary node immediately returns the result to the frontend server. If the transaction is a PUT, PUTV, or DELETE request, the primary node will perform a 2PC protocol with the other subordinate nodes in the backend group. For the 2PC protocol, the primary node will first send a PREP message to the subordinate nodes, to which the nodes respond with an ACK or REJECT message.
@@ -56,7 +56,9 @@ Our design overall consists of various components. There is a frontend load bala
 ## Backend Features
 
 ### 2PC Protocol and Fault Tolerance
-The logs represent the three nodes in the same backend group. The leftmost log is the primary node, and the other two are the subordinate nodes.
+The backend storage service is truly distributed where there is extensive fault tolerance. If one storage node is stopped, the coordinator will notice and direct the users to a working storage node. Additionally, the data is replicated across the storage nodes, so the users will not lose data in case the storage node they were previously accessing fails. The storage servers are grouped by 3, where each group has a primary node. For each transaction, the primary storage server will perform a 2PC protocol with its subordinates in the same group. 
+
+In the sample below, logs represent the three nodes in the same backend group. The leftmost log is the primary node, and the other two are the subordinate nodes.
 
 #### Fully functioning group (3 Nodes):
 ![3nodes](media/3nodes.gif)
@@ -71,13 +73,21 @@ The logs represent the three nodes in the same backend group. The leftmost log i
 - We shut down the primary node from the 2 nodes once again. We see that the node with the log to the right is the new primary node and can easily perform the chat transaction.
 
 ### Key-value store
-The backend consists of a backend coordinator and multiple backend servers which handle the commands PUT, GET, CPUT, DELETE, as well as some other commands that are helpers for other services, such as the admin console. The backend storage service is truly distributed where there is extensive fault tolerance. If one storage node is stopped, the coordinator will notice and direct the users to a working storage node. Additionally, the data is replicated across the storage nodes, so the users will not lose data in case the storage node they were previously accessing fails. The storage servers are grouped by 3, where each group has a primary node. For each transaction, the primary storage server will send a prepare to the other storage servers in its group, which will respond and if all other storage servers response ready the transaction will go through as 2PC is implemented within the system.
+The backend stores items similar to Google Bigtable, where each item is stored as a key-value pair. The key consists of a row and column, where the row is the type of operation (ex. sessions, email, password) and the column is a hashed value of the unique identifier for the data. Then the value is stored as a string. There are different protocols for each type of transaction. Here is how four types of operations (GET, PUT, CPUT, DELETE) are used for transactions with the key-value store:
+- GET: The backend retrieves the value of the key.
+    - GET;row;col
+- PUT: The backend stores the key and value.
+    - PUTV;row;col;valueSize;value
+- CPUT: The backend updates the value based on the key.
+    - CPUT;row;col;v1Size;v2Size;v1;v2
+- DELETE: The backend deletes the key and value.
+    - DELE;row;col
 
 ### Tablet/Partitioning
-For the tablets and partitioning we used a predetermined size (by default 50 MB) to determine whether a given tablet should be split into two. Each KV store server contains a vector of currently active tablets and places incoming requests into the tablets based on their key range (which dynamically changes as more write operations are performed). Each tablet maintains a log of the write operations it has received in one of the following formats: PUTV;row;col;valueSize;value or CPUT;row;col;v1Size;v2Size;v1;v2 or DELE;row;col. This allows operations to be replayed at recovery.
+For the tablets and partitioning we used a predetermined size (by default 50 MB) for each backend node to determine whether a given tablet should be split into two. Each KV store server contains a vector of currently active tablets and places incoming requests into the tablets based on their key range (which dynamically changes as more write operations are performed). Each tablet maintains a log of the write operations it has received. This allows operations to be replayed at recovery through checkpointing.
 
 ### Checkpointing
-Every tablet logs each incoming transaction. These logs are replayed upon revival of a node. Additionally, each tablet periodically checkpoints (by default, every 10 write transactions). Once a node is restarted, it requests the latest checkpoint numbers from the primary. If the numbers on its local folder match, we replay the latest local checkpoints. If they do not, the node requests the latest checkpoint file(s) from the primary and then replays them. If the primary receives any new transactions during this time, they are also forwarded to the recovering node. We were, however, unable to get the checkpoint replaying functionality to replay the checkpoint upon revival.
+Every tablet logs each incoming transaction. These logs are replayed upon the revival of a node. Additionally, each tablet periodically checkpoints (by default, every 10 write transactions). Once a node is restarted, it requests the latest checkpoint numbers from the primary. If the numbers on its local folder match, we replay the latest local checkpoints. If they do not, the node requests the latest checkpoint file(s) from the primary and then replays them. If the primary receives any new transactions during this time, they are also forwarded to the recovering node.
 
 ### Heartbeat
-The coordinator would run a heartbeat system by pinging a port open on each storage node in a separate thread specifically open for pinging heartbeats. Each time it is pinged, it receives the pid of the storage server as well as knowing that it is running. The pings would be sent out every 100ms, and if no response is received for 5 pings, the server would be marked as down and no longer used by the coordinator until it is active again. The pid received is used for debugging via the admin console which can stop and start any of the storage servers.
+The backend coordinator runs a heartbeat system by pinging a port open on each storage node in a separate thread specifically open for pinging heartbeats. Each time it is pinged, it receives the pid of the storage server as well as knowing that it is running. The pings would be sent out every 100ms, and if no response is received for 5 pings, the server would be marked as a "dead" node and no longer used by the coordinator until it is active again. The pid received is used for debugging via the admin console which can stop and start any of the storage servers.
