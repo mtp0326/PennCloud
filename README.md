@@ -51,7 +51,7 @@ PennCloud contains a chat board for users to communicate with all of the other P
 ### Admin Console
 The admin console can be accessed by logging in with the admin account made with username “admin” and password “password”. This admin page displays all of the servers and their port within the PennCloud system. It displays the status of the servers, which are received by the coordinator pinging the servers in the backend, and the status of those pings. It also provides a table to view all of the raw data in the system and shows the server it's stored on, the key (row;column), and the value for every data entry within PennCloud. The admin console also provides functionality for stopping and starting servers, which can be useful for debugging and testing for fault tolerance.
 
-  <img src="media/admin.png" width="65%" />
+![admin](media/admin.png)
 
 ### Frontend Load Balancer and Servers
 The frontend consists of a frontend load balancer, which the user first connects to. This load balancer then redirects the user to one of the active frontend servers. Within the frontend servers, they have support for GET, POST, and PUT requests, as well as containing header information within the requests.  The frontend servers also support cookies, which can improve user performance.
