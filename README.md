@@ -10,7 +10,17 @@ Coming Soon!
 
 ## Frontend Features
 
+### Login Page
+Within PennCloud, users have the ability to login to an existing account or create a new account. The active account of any session is stored within the cookies so that users do not have to constantly login again whenever accessing their mail or files from the same session. There is also the ability for users to change their password.
+
+<p float="left">
+  <img src="media/login.png" width="49%" />
+  <img src="media/signup.png" width="49%" />
+</p>
+
 ### Storage Drive
+The web storage service provides support for users to upload and download any of their files. It supports adding and moving files and folders within the storage system. It also supports renaming folders and files and supports both text and binary files. The files are stored by the users in the key-value store and can be accessed by users across sessions. To remain compatible with the existing backend, values are encoded as base 64 strings while stored in the storage server. This allows for multiple file formats to not be disrupted when cast as strings. The values are then decrypted when being pulled from the backend.
+
 <img src="media/storagedrive.gif" width="960" alt="file"/>
 
 In chronological order:
@@ -21,16 +31,30 @@ In chronological order:
 - Download a file
 
 ### Send Email to Another PennCloud User
+The webmail service allows for easy communication between any users within PennCloud by simply sending them an email with their username “@penncloud” within the provided interface.
+
 ![email](media/sendemail(internal).gif)
 - We see two separate tabs, where one in the yellow tab is the sender, and the other in the black tab is the receiver. The email is sent and received through SMTP protocol.
 
 ### Send Email to an External Email Address
+Emails can be sent to remote users outside of the PennCloud system simply by providing their email addresses when sending the mail. The mail service looks up the MX records for the recipient's domain and connects to the servers provided until one is available to deliver the mail. An SMTP service runs on port 2500 by default, which takes over the communication for receiving mail from users outside of PennCloud and sending it to the appropriate user’s mailbox. 
+
 ![email](media/sendemail(external).gif)
-- The emails can also be sent to external email addresses such as Gmail.
+- The emails can be sent to external email addresses such as Gmail.
 
 ### Chat
+PennCloud contains a chat board for users to communicate with all of the other PennCloud users on the system. Messages are timestamped with the sending user and are sorted in order with the most recent message on the bottom.
+
 ![chat](media/chat.gif)
 - We again see two separate tags: the yellow tab is Adam, and the black tab is Admin. The chat is sent and received in real-time and ordered chronologically.
+
+### Admin Console
+The admin console can be accessed by logging in with the admin account made with username “admin” and password “password”. This admin page displays all of the servers and their port within the PennCloud system. It displays the status of the servers, which are received by the coordinator pinging the servers in the backend, and the status of those pings. It also provides a table to view all of the raw data in the system and shows the server it's stored on, the key (row;column), and the value for every data entry within PennCloud. The admin console also provides functionality for stopping and starting servers, which can be useful for debugging and testing for fault tolerance.
+
+  <img src="media/admin.png" width="65%" />
+
+### Frontend Load Balancer and Servers
+The frontend consists of a frontend load balancer, which the user first connects to. This load balancer then redirects the user to one of the active frontend servers. Within the frontend servers, they have support for GET, POST, and PUT requests, as well as containing header information within the requests.  The frontend servers also support cookies, which can improve user performance.
 
 ## Flowchart of the Architecture
 Our design overall consists of various components. There is a frontend load balancer the user connects to, which then redirects the user to one of the available frontend servers. The frontend servers then interact with the backend coordinator, which gives them an appropriate backend storage server to connect to and handle the request. Additionally, an extra frontend server acts as the SMTP server to support retrieving mail from external sources and then directing that mail to the backend by first going to the backend coordinator, as with the other frontend servers.
@@ -40,7 +64,7 @@ Our design overall consists of various components. There is a frontend load bala
 ### General Workflow of Transaction:
 1. When the user sends a transaction request from the webpage, the request is sent to the frontend load balancer. The frontend load balancer then provides the user with the IP address and port of the frontend server.
 2. The user then sends a connection and transaction request to the indicated frontend server.
-3. The frontend server then sends a transaction request to the backend load balancer/coordinator to get an available backend group's IP address and port. The load balancer then provides the IP address and port of the primary node for the available backend group.
+3. The frontend server then sends a transaction request to the backend load balancer/coordinator to get an available backend group's IP address and port. The load balancer/coordinator then provides the IP address and port of the primary node for the available backend group.
 4. The frontend server then sends the transaction request to the primary node of the backend group.
 5. The backend group performs a 2PC protocol to process the request (will be specified in the 2PC Backend Transaction Process).
 6. The primary node will return the result to the frontend server.
