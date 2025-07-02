@@ -2,6 +2,9 @@
 - Adam Gorka @AdamEGorka, Andrew Lukashchuk @lukashchu, Hassan Rizwan @hrizwan3, Jiwoong (Matt) Park @mtp0326
 - 11/08/2024 -
 
+## Contents
+- [Introduction]#Introduction
+
 ## Introduction
 PennCloud is a storage and communication platform that allows users to store files, send emails, and chat with others. It is designed to be user-friendly and efficient, with distributed servers and fault tolerance to ensure the platform is always available. The platform is built with a frontend load balancer, frontend servers, backend servers, and an SMTP server to handle the various functionalities.
 
