@@ -6,6 +6,19 @@
 - [Introduction](#Introduction)
 - [Frontend Features](#Frontend-Features)
   - [Login Page](#Login-Page)
+  - [Storage Drive](#Storage-Drive)
+  - [Send Email to Another PennCloud User](#Send-Email-to-Another-PennCloud-User)
+  - [Send Email to an External Email Address](#Send-Email-to-an-External-Email-Address)
+  - [Chat](#Chat)
+  - [Admin Console](#Admin-Console)
+  - [Frontend Load Balancer and Servers](#Frontend-Load-Balancer-and-Servers)
+- [Flowchart of the Architecture](#Flowchart-of-the-Architecture)
+  - [General Workflow of Transaction](#General-Workflow-of-Transaction)
+  - [2PC Backend Transaction Process](#2PC-Backend-Transaction-Process)
+  - [Key-value store](#Key-value-store)
+  - [Tablet/Partitioning](#Tablet/Partitioning)
+  - [Checkpointing](#Checkpointing)
+  - [Heartbeat](#Heartbeat)
 
 ## Introduction
 PennCloud is a storage and communication platform that allows users to store files, send emails, and chat with others. It is designed to be user-friendly and efficient, with distributed servers and fault tolerance to ensure the platform is always available. The platform is built with a frontend load balancer, frontend servers, backend servers, and an SMTP server to handle the various functionalities.
