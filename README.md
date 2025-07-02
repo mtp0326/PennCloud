@@ -15,6 +15,7 @@
 - [Flowchart of the Architecture](#Flowchart-of-the-Architecture)
   - [General Workflow of Transaction](#General-Workflow-of-Transaction)
   - [2PC Backend Transaction Process](#2PC-Backend-Transaction-Process)
+- [Backend Features](#Backend-Features)
   - [Key-value store](#Key-value-store)
   - [Tablet/Partitioning](#Tablet/Partitioning)
   - [Checkpointing](#Checkpointing)
