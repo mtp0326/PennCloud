@@ -1,6 +1,6 @@
 # Welcome to PennCloud :cloud:
 - Adam Gorka @AdamEGorka, Andrew Lukashchuk @lukashchu, Hassan Rizwan @hrizwan3, Jiwoong (Matt) Park @mtp0326
-- 11/08/2024 -
+- 11/08/2024 - 01/28/2025
 
 ## Contents
 - [Introduction](#Introduction)
